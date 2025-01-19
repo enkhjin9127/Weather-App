@@ -1,7 +1,10 @@
+// App.js
 import React, { useEffect, useState, useCallback } from "react";
-import { citiesFilter } from "./utils/citiesFilter";
 import searchIcon from "./img/Search-Icon.png";
-import { ReactComponent as localization_icon } from "./img/localization_icon.svg";
+import moonIcon from "./img/moon.png";
+import sunIcon from "./img/sun.png";
+import localIcon from "./img/localization_icon.png";
+
 const weatherApiKey = "1ce21f8398014abf9da21949251501";
 
 const App = () => {
@@ -9,7 +12,7 @@ const App = () => {
   const [filteredData, setFilteredData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [cities, setCities] = useState([]);
-  const [selectedCity, setSelectedCity] = useState("Ulaanbaatar, Mongolia");
+  const [selectedCity, setSelectedCity] = useState("Ulaanbaatar");
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [weather, setWeather] = useState({});
   const [error, setError] = useState(null);
@@ -36,8 +39,7 @@ const App = () => {
         min_c: result.forecast.forecastday[0].day.mintemp_c,
         condition: result.forecast.forecastday[0].day.condition.text,
         date: result.forecast.forecastday[0].date,
-        localtime: result.location.localtime, // local time for determining day or night
-        country: result.location.country,
+        localtime: result.location.localtime,
       };
 
       setWeather(weatherData);
@@ -59,8 +61,15 @@ const App = () => {
         "https://countriesnow.space/api/v0.1/countries"
       );
       const result = await response.json();
-      const countriesAndCity = citiesFilter(result);
-      setCities(countriesAndCity);
+      const citiesList = result.data.reduce((acc, country) => {
+        return acc.concat(
+          country.cities.map((city) => ({
+            city,
+            country: country.country,
+          }))
+        );
+      }, []);
+      setCities(citiesList);
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -74,8 +83,10 @@ const App = () => {
     } else {
       setFilteredData(
         cities
-          .filter((city) =>
-            city.toLowerCase().startsWith(countriesSearch.toLowerCase())
+          .filter(
+            ({ city, country }) =>
+              city.toLowerCase().startsWith(countriesSearch.toLowerCase()) ||
+              country.toLowerCase().startsWith(countriesSearch.toLowerCase())
           )
           .slice(0, 5)
       );
@@ -96,12 +107,9 @@ const App = () => {
 
   return (
     <div className="flex h-screen">
-      {/* Left Section */}
-      <section
-        className={`flex-1 flex flex-col items-center justify-center bg-gray-100`}
-      >
-        <div>
-          <div className="relative flex items-center w-[567px] h-[80px] bg-white shadow-md rounded-full">
+      <section className="flex-1 flex flex-col items-center bg-gray-100">
+        <div className="mt-[40px]">
+          <div className="relative flex items-center w-[567px] h-[80px] bg-white shadow-md rounded-full right-[70px]">
             <img
               className="absolute left-6 h-[35px] w-[35px] text-gray-500"
               src={searchIcon}
@@ -119,7 +127,7 @@ const App = () => {
               {loading ? (
                 <p className="text-center py-4 text-gray-500">Loading...</p>
               ) : (
-                filteredData.map((city, index) => (
+                filteredData.map(({ city, country }, index) => (
                   <div
                     key={index}
                     className={`flex items-center gap-3 px-4 py-3 hover:bg-gray-100 cursor-pointer ${
@@ -131,35 +139,77 @@ const App = () => {
                       setFilteredData([]);
                     }}
                   >
-                    <p className="text-gray-800">{city}</p>
+                    <p className="text-gray-800">
+                      {city}, <span className="text-gray-500">{country}</span>
+                    </p>
                   </div>
                 ))
               )}
             </div>
           </div>
         </div>
-        <div className="w-[414px] h-[824px]">
+        {/* Day */}
+        <div className="w-[414px] h-[824px] p-4 rounded-[48px] bg-white bg-opacity-75">
           {!weatherLoading && !error && (
-            <div>
-              <p>{weather.date}</p>
-              <p className="text-4xl font-bold mb-4">{selectedCity}</p>
-              <div>{weather.max_c}°C</div>
-              <div>Condition: {weather.condition}</div>
+            <div className="w-full h-full ">
+              <div className="py-10 px-8 flex flex-col">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h4 className=" text-gray-400 ">{weather.date}</h4>
+                    <h2 className="h-12 text-5xl font-bold text-textDark mt-2">
+                      {selectedCity}
+                    </h2>
+                  </div>
+                  <img
+                    className="w-[40px] h-[40px]"
+                    src={localIcon}
+                    alt="localization-icon"
+                  />
+                </div>
+                <div className="mt-12 flex justify-center items-center">
+                  <img
+                    className="w-[262.11px] h-[262.11px]"
+                    src={sunIcon}
+                    alt="sun"
+                  />
+                </div>
+              </div>
+              <div className="w-[414px] h-[269px] pl-9">
+                <div className="text-transparent bg-clip-text font-extrabold text-[110px] -mt-10 bg-gradient-to-b from-black to-white">
+                  {weather.max_c}°C
+                </div>
+                <div
+                  className="font-bold mb-12 h-6 font-manrope"
+                  style={{ color: "rgb(119, 124, 206)" }}
+                >
+                  {weather.condition}
+                </div>
+              </div>
             </div>
           )}
         </div>
       </section>
 
-      {/* Right Section */}
+      {/* Night */}
       <section
-        className={`flex-1 flex flex-col items-center justify-center bg-gray-900 text-white`}
+        className={`flex-1 flex flex-col items-center justify-center bg-customDark text-white`}
       >
-        <div className="w-[414px] h-[824px]">
+        <div className="w-[414px] h-[824px] bg-customDarkAlpha rounded-[48px]">
           {!weatherLoading && !error && (
             <div>
-              <p>{weather.date}</p>
-              <p className="text-4xl font-bold mb-4">{selectedCity}</p>
-              <div>{weather.max_c}°C</div>
+              <div>
+                <div>
+                  <p>{weather.date}</p>
+                  <p className="text-4xl font-bold mb-4">{selectedCity}</p>
+                </div>
+                <img src={localIcon} alt="localization-icon" />
+              </div>
+              <img
+                className="w-[262.11px] h-[262.11px]"
+                src={moonIcon}
+                alt="moon"
+              />
+              <div>{weather.min_c}°C</div>
               <div>{weather.condition}</div>
             </div>
           )}
